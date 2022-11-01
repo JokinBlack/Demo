@@ -192,6 +192,7 @@ const deleteNode = (item: node) => {
   const index = nodeValidateForm.nodeList.indexOf(item);
   if (index !== -1) {
     nodeValidateForm.nodeList.splice(index, 1);
+
   }
 };
 //提交的标记
@@ -244,10 +245,7 @@ const getNodeList = () => {
         }
         nodeValidateForm.onlyOneNodeList.push(data as any)
 
-      }else{
-        nodeValidateForm.secondEventNode.push(nodeItem as any)
       }
-      
     });
   });
   //在这里遍历,修改nodeList中的id
@@ -275,13 +273,13 @@ const getTriadList = () => {
         nodeValidateForm.onlyOneNodeList.map((item:any,keyId:any)=>{
           if(item.value == nodeItem){
             consoleTriadItem[`node_${index2 + 1}_id`] = keyId + 1
+            
           }
           
         })
       }else{
         let nodeNameSpace = nodeItem.split('.')
-        for(let i = 0;i<index+1;i++){
-          
+        for(let i = 0;i<nodeValidateForm.nodeList.length;i++){
           if(nodeValidateForm.nodeList[i].name == nodeNameSpace[0]){
             let eventItenList = item.value.split(/\s+/).filter(Boolean)
             if(eventItenList.indexOf(nodeNameSpace[1])){
@@ -308,7 +306,7 @@ const getTriadList = () => {
             break
           }else{
             //直到找到最后一个都没找到event_Id
-            if(i+1==index){
+            if(i+1==nodeValidateForm.nodeList.length){
               submitTag.value = false
               ElMessage.error({
                 message: nodeNameSpace[0] + '输入无效'
