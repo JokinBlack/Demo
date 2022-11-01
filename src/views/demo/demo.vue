@@ -1,6 +1,7 @@
 <template>
   <div id="node-box">
-    <!-- <div class="title">第一次作业</div> -->
+    <div class="title">第一次作业</div>
+    <a href="https://github.com/JokinBlack/Demo.git">git地址：https://github.com/JokinBlack/Demo.git</a>
     <div class="node-form">
       <el-form ref="formRef" :model="nodeValidateForm">
         <el-form-item label="主干" prop="">
@@ -20,6 +21,10 @@
                 validator: spaceDouble,
                 trigger: 'blur',
               },
+              {
+                validator: nameIsValid,
+                trigger: 'blur',
+              },
             ]"
           >
             <div class="form-box">
@@ -37,7 +42,7 @@
       </el-form>
     </div>
     <div class="form-options-btn">
-      <div @click="" class="btn-item">重置</div>
+      <div @click="resetForm(formRef)" class="btn-item">重置</div>
       <div @click="submitForm(formRef)" class="btn-item">提交</div>
     </div>
   </div>
@@ -45,7 +50,7 @@
 
 <script lang="ts" setup>
 import { reactive, ref } from "vue";
-import type { FormInstance } from "element-plus";
+import { ElMessage, FormInstance } from "element-plus";
 
 // 题目：编辑一个页面用于格式化内容。
 // 例如，输入的格式如图所示，点击保存按钮后数据应该格式化成
@@ -104,7 +109,8 @@ const formRef = ref<FormInstance>();
 //输入的表单list
 const nodeValidateForm = reactive<{
   nodeList: DomainItem[];
-  onlyOneNodeList: DomainItem[];
+  onlyOneNodeList: any;
+  secondEventNode: any;
 }>({
   nodeList: [
     {
@@ -124,9 +130,10 @@ const nodeValidateForm = reactive<{
     },
   ],
   onlyOneNodeList: [],
+  secondEventNode: [],
 });
 
-//自定义表单校验
+//自定义表单校验,检查表单是否用空格分割成3个部分，宽松模式，多个空格算一个
 const spaceDouble = (rule: any, value: any, callback: any) => {
   //验证输入是否合法
   let data = value.split(/\s+/).filter(Boolean);
@@ -134,6 +141,25 @@ const spaceDouble = (rule: any, value: any, callback: any) => {
     callback(new Error("请检查表单是否用空格分割成3个部分"));
   } else {
     callback();
+  }
+};
+//自定义表单校验,检查输入对象时是否为event_x.value
+const nameIsValid = (rule: any, value: any, callback: any) => {
+  //验证输入是否合法
+  let data = value.split(/\s+/).filter(Boolean);
+  if(value.indexOf('.')===-1){
+    callback()
+  }else{
+    data.map((item:any)=>{
+      if(item.indexOf('.')!==-1){
+        let nodeNameSpace = item.split('.')
+        let regex = new RegExp(/^event_[0-9]+$/);
+        if(!regex.test(nodeNameSpace[0])){
+          callback(new Error("请检查表单对象是否为event_x.value"))
+        }
+      }
+    })
+    callback()
   }
 };
 //提交用到的数据
@@ -147,46 +173,51 @@ interface DomainItem {
   name: string;
 }
 
-const removeDomain = (item: DomainItem) => {
-  const index = nodeValidateForm.nodeList.indexOf(item);
-  if (index !== -1) {
-    nodeValidateForm.nodeList.splice(index, 1);
-  }
-};
 
 const addNode = () => {
-  nodeValidateForm.nodeList.push({
+  let data:any = {
     value: "",
-    key: Date.now(),
-    name: 'event_' + (nodeValidateForm.nodeList.length + 1)
-  });
-  console.log(nodeValidateForm.nodeList);
+  }
+  let nodeListLength = nodeValidateForm.nodeList.length
+  if(nodeListLength == 0){
+    data.name = 'event_1'
+    data.key = 1
+  }else{
+    data.name = 'event_' + (nodeValidateForm.nodeList[nodeListLength-1].key + 1)
+    data.key = nodeValidateForm.nodeList[nodeListLength-1].key + 1
+  }
+  nodeValidateForm.nodeList.push(data);
 };
 const deleteNode = (item: node) => {
-  console.log(item);
   const index = nodeValidateForm.nodeList.indexOf(item);
   if (index !== -1) {
     nodeValidateForm.nodeList.splice(index, 1);
   }
-  console.log(item);
-  // if (item.teamMemberId) {
-  //     API_TEAM_DELETE(item.teamMemberId).then((res) => {
-  //         if (res.code == 200) {
-  //             ElMessage.success("删除成功");
-  //         }
-  //     });
-  // }
 };
+//提交的标记
+const submitTag = ref(false)
 //提交
 const submitForm = (formEl: FormInstance | undefined) => {
   if (!formEl) return;
-
+  submitTag.value = true
   formEl.validate((valid: any) => {
     if (valid) {
       //获取nodeList
       let nodeList = getNodeList();
-      getTriadList()
-      console.log("xxxxxxxxxxxx", nodeList);
+      let triadList = getTriadList()
+      if(submitTag.value){
+        // console.log("nodeList", nodeList);
+        // console.log('triadList',triadList)
+        let priftData = {
+          nodeList:  nodeList,
+          triadList: triadList
+        }
+        
+        console.log(JSON.stringify(priftData))
+      }else{
+        console.log("error submit!");
+      }
+      
     } else {
       console.log("error submit!");
       return false;
@@ -196,7 +227,6 @@ const submitForm = (formEl: FormInstance | undefined) => {
 //获取nodeList
 const getNodeList = () => {
   formConsole.nodeList = [];
-  console.log("submit!", nodeValidateForm.nodeList);
   let nodeList = [];
   nodeValidateForm.onlyOneNodeList = []
   nodeValidateForm.nodeList.map((item) => {
@@ -208,14 +238,18 @@ const getNodeList = () => {
           name: nodeItem,
         };
         formConsole.nodeList.push(consoleNodeItem);
-        
+        let data = {
+          name:item.name,
+          value:nodeItem
+        }
+        nodeValidateForm.onlyOneNodeList.push(data as any)
+
       }else{
-        console.log(nodeItem)
+        nodeValidateForm.secondEventNode.push(nodeItem as any)
       }
-      nodeValidateForm.onlyOneNodeList.push(nodeItem as any)
+      
     });
   });
-
   //在这里遍历,修改nodeList中的id
   formConsole.nodeList.map((item: any, index: any) => {
     item.id = index + 1;
@@ -226,30 +260,72 @@ const getNodeList = () => {
 
 //获取triadList
 const getTriadList = () => {
-  let triadList = []
-  // nodeValidateForm.onlyOneNodeList
+  formConsole.triadList = []
   nodeValidateForm.nodeList.map((item:any,index:any)=>{
-    let data = {
-      id: index + 1,
-    }
     let nodeList = [];
     nodeList = item.value.split(/\s+/).filter(Boolean);
-    nodeList.map((nodeItem:any, index:any) => {
-      if (nodeItem.indexOf(".") === -1) {
-        let consoleTriadItem = {
-          id: -1,
-          name: nodeItem,
-        };
-        formConsole.triadList.push(consoleTriadItem);
-        
-      }else{
-        console.log(nodeItem)
-      }
+    let consoleTriadItem:any = {
+      id: index + 1,
+    };
+    nodeList.map((nodeItem:any, index2:any) => {
       
-    });
-  })
-}
+      if (nodeItem.indexOf(".") === -1) {
+        
+        // consoleTriadItem[`node_${index2 + 1}_id`] = nodeValidateForm.onlyOneNodeList.map((item:any) => item.id).indexOf(nodeItem)
+        nodeValidateForm.onlyOneNodeList.map((item:any,keyId:any)=>{
+          if(item.value == nodeItem){
+            consoleTriadItem[`node_${index2 + 1}_id`] = keyId + 1
+          }
+          
+        })
+      }else{
+        let nodeNameSpace = nodeItem.split('.')
+        for(let i = 0;i<index+1;i++){
+          
+          if(nodeValidateForm.nodeList[i].name == nodeNameSpace[0]){
+            let eventItenList = item.value.split(/\s+/).filter(Boolean)
+            if(eventItenList.indexOf(nodeNameSpace[1])){
+              // let id = nodeValidateForm.onlyOneNodeList.map((item:any) => item).indexOf(nodeNameSpace[1]) + 1
+              for(let x = 0;x<nodeValidateForm.onlyOneNodeList.length;x++){
+                if(nodeValidateForm.onlyOneNodeList[x].name == nodeNameSpace[0]&&nodeValidateForm.onlyOneNodeList[x].value==nodeNameSpace[1]){
+                  consoleTriadItem[`node_${index2 + 1}_id`] = x + 1
+                  break
+                }else{
+                  //找到最后一个没找到
+                  if(x+1 == nodeValidateForm.onlyOneNodeList.length){
+                    submitTag.value = false
+                    ElMessage.error({
+                      message: nodeItem + '输入无效'
+                    })
+                  }
+                }
+                
 
+              }
+            }else{
+              consoleTriadItem[`node_${index2 + 1}_id`] = null
+            }
+            break
+          }else{
+            //直到找到最后一个都没找到event_Id
+            if(i+1==index){
+              submitTag.value = false
+              ElMessage.error({
+                message: nodeNameSpace[0] + '输入无效'
+              })
+            }
+            
+          }
+            
+          
+        }
+      }
+    });
+    formConsole.triadList.push(consoleTriadItem);
+    
+  })
+  return formConsole.triadList
+}
 const resetForm = (formEl: FormInstance | undefined) => {
   if (!formEl) return;
   formEl.resetFields();
@@ -265,8 +341,6 @@ const resetForm = (formEl: FormInstance | undefined) => {
   background: #ffffff;
   padding: 0 40px;
 
-  background: #30324f;
-  min-height: 100vh;
   .title {
     margin-top: 10px;
     line-height: 80px;
